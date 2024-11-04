@@ -1,0 +1,60 @@
+services:
+
+  wordpress:
+    name: wordpress
+    image: wordpress
+    restart: always
+    environment:
+      WORDPRESS_DB_HOST: db
+      WORDPRESS_DB_USER: wpuser
+      WORDPRESS_DB_PASSWORD: <DBPASSWORD>
+      WORDPRESS_DB_NAME: wordpress
+      VIRTUAL_HOST: <DOMAINNAME>
+      LETSENCRYPT_HOST: <DOMAINNAME>
+    volumes:
+      - wordpress:/var/www/html
+
+  db:
+    name: db
+    image: mysql:8.0
+    restart: always
+    environment:
+      MYSQL_DATABASE: wordpress
+      MYSQL_USER: wpuser
+      MYSQL_PASSWORD: <DBPASSWORD>
+      MYSQL_RANDOM_ROOT_PASSWORD: '1'
+    volumes:
+      - db:/var/lib/mysql
+
+  nginx-proxy:
+    name: nginx-proxy
+    image: nginxproxy/nginx-proxy
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - certs:/etc/nginx/certs
+      - html:/usr/share/nginx/html
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+    labels:
+      - com.github.nginx-proxy.nginx
+
+  nginx-proxy-acme:
+    name: nginx-proxy-acme
+    image: nginxproxy/acme-companion
+    restart: always
+    depends_on:
+       - "nginx-proxy"
+    environment:
+      DEFAULT_EMAIL: <EMAIL>
+    volumes:
+      - certs:/etc/nginx/certs
+      - html:/usr/share/nginx/html
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
+volumes:
+  wordpress:
+  db:
+  html:
+  certs:
